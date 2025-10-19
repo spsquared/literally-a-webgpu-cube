@@ -1,0 +1,19 @@
+#canvas {
+    position: fixed;
+    top: 4px;
+    left: 4px;
+    --canvas-size: calc(min(100vw - 16px, 100vh - 16px));
+    width: var(--canvas-size);
+    height: var(--canvas-size);
+    border: 4px solid black;
+    background-color: black;
+    background-image:
+        linear-gradient(45deg, #222 25%, transparent 25%),
+        linear-gradient(135deg, #222 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #222 75%),
+        linear-gradient(135deg, transparent 75%, #222 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 0, 10px -10px, 0px 10px;
+    user-select: none;
+    -webkit-user-drag: none;
+}
