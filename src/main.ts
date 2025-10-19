@@ -9,6 +9,7 @@ const resolution = 800;
 const errorMessage = document.getElementById('errorMessage') as HTMLDivElement;
 function showErrorAndExit(err: string | Error): never {
     errorMessage.innerText += err + '\n';
+    errorMessage.style.display = 'block';
     throw err instanceof Error ? err : new Error(err);
 }
 
@@ -36,8 +37,10 @@ ctx.configure({
 });
 console.log('GPU limits', gpu.limits);
 
-// vertices in 4d + normals 
+// 4d position + 3d normal
+const vertexStride = 4;
 const vertexData: [number, number, number, number][] = [
+    // as triangle strip
     [0, 0, 0, 1],
     [0, 1, 0, 1],
     [1, 0, 0, 1],
@@ -48,25 +51,53 @@ const vertexData: [number, number, number, number][] = [
     [0, 0, 1, 1],
     [1, 1, 1, 1],
     [1, 0, 1, 1],
+    [1, 0, 0, 1],
     [0, 0, 1, 1],
     [0, 0, 0, 1],
     [0, 1, 0, 1]
 ];
 const vertexDataBuffer = new Float32Array(vertexData.flat().map((n) => n * 2 - 1));
 
-const cameraProjectionMatrix = mat4.perspective(Math.PI / 2, 1, 1, 100);
-const initialTransformMatrix = mat4.identity(); // why identity? not really sure, haven't taken linear algebra yet lmao
-mat4.translate(initialTransformMatrix, new Float32Array([0, 0, -5]), initialTransformMatrix);
-mat4.rotate(initialTransformMatrix, new Float32Array([1, 0, 0]), -Math.PI / 3, initialTransformMatrix);
+const cameraProjectionMatrix = mat4.perspective(Math.PI / 3, 1, 1, 100);
+const initialTransformMatrix = mat4.translate(mat4.identity(), new Float32Array([0, 0, -5])); // why identity? not really sure, haven't taken linear algebra yet lmao
+const spinny = {
+    lastFrame: performance.now(),
+    enabled: true,
+    theta: 0,
+    phi: -Math.PI / 3,
+    mouseDown: false,
+};
 const projectionMatrix = mat4.create();
 function spinnyModelMatrix(): Float32Array {
+    if (!spinny.mouseDown && spinny.enabled) spinny.theta += Math.PI * (performance.now() - spinny.lastFrame) / 2000;
+    spinny.lastFrame = performance.now();
     mat4.multiply(
         cameraProjectionMatrix,
-        mat4.rotate(initialTransformMatrix, new Float32Array([0, 0, 1]), Math.PI * performance.now() / 2000),
+        mat4.rotateZ(mat4.rotateX(initialTransformMatrix, spinny.phi), spinny.theta),
         projectionMatrix
     );
     return projectionMatrix;
 }
+document.addEventListener('mousedown', () => {
+    spinny.mouseDown = true;
+    document.body.requestPointerLock();
+});
+document.addEventListener('mouseup', () => {
+    spinny.mouseDown = false;
+    document.exitPointerLock();
+});
+document.addEventListener('touchstart', () => spinny.mouseDown = true);
+document.addEventListener('touchend', (e) => spinny.mouseDown = e.touches.length > 0);
+document.addEventListener('blur', () => {
+    spinny.mouseDown = false;
+    document.exitPointerLock();
+});
+document.addEventListener('mousemove', (e) => {
+    if (spinny.mouseDown) {
+        spinny.theta += e.movementX / 500;
+        spinny.phi = Math.max(-Math.PI, Math.min(spinny.phi + e.movementY / 500, 0));
+    }
+});
 
 const buffers = {
     vertices: gpu.createBuffer({
@@ -75,6 +106,7 @@ const buffers = {
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
     }),
     projection: gpu.createBuffer({
+        label: 'Uniform projection buffer',
         size: mat4.create().byteLength,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     })
@@ -105,10 +137,10 @@ const pipeline = gpu.createRenderPipeline({
         entryPoint: 'vertex_main',
         constants: {},
         buffers: [{
-            arrayStride: vertexDataBuffer.BYTES_PER_ELEMENT * 3,
+            arrayStride: vertexDataBuffer.BYTES_PER_ELEMENT * vertexStride,
             attributes: [{
                 shaderLocation: 0,
-                format: 'float32x3',
+                format: 'float32x4',
                 offset: 0
             }],
             stepMode: 'vertex'
@@ -124,6 +156,7 @@ const pipeline = gpu.createRenderPipeline({
     },
     primitive: {
         topology: 'triangle-strip',
+        // stripIndexFormat: 'uint16',
         // commented because this is a weird mesh that might not cull correctly
         // cullMode: 'back'
     },
@@ -154,6 +187,21 @@ const renderPassDescriptor = {
     }
 } satisfies GPURenderPassDescriptor;
 
+let drawMode = 0;
+document.addEventListener('keydown', (e) => {
+    const key = e.key.toLowerCase();
+    switch (key) {
+        case ' ':
+            spinny.enabled = !spinny.enabled;
+            break;
+        case '1':
+            drawMode = drawMode == 1 ? 0 : 1;
+            break;
+        case '2':
+            drawMode = drawMode == 2 ? 0 : 2;
+            break;
+    }
+});
 while (true) {
     await new Promise<void>((resolve) => {
         window.requestAnimationFrame(async () => {
@@ -164,7 +212,15 @@ while (true) {
             renderPass.setPipeline(pipeline);
             renderPass.setVertexBuffer(0, buffers.vertices);
             renderPass.setBindGroup(0, bindGroup);
-            renderPass.draw(vertexData.length);
+            if (drawMode == 1) {
+                // triangle mesh breakdown
+                renderPass.draw(Math.floor(((performance.now() / 500) % (vertexData.length - 2)) + 3));
+            } else if (drawMode == 2) {
+                // individual triangles
+                renderPass.draw(3, 1, Math.floor((performance.now() / 500) % (vertexData.length - 3)));
+            } else {
+                renderPass.draw(vertexData.length);
+            }
             renderPass.end();
             gpu.queue.submit([encoder.finish()]);
             gpu.queue.onSubmittedWorkDone().then(() => resolve());

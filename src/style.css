@@ -17,3 +17,36 @@
     user-select: none;
     -webkit-user-drag: none;
 }
+
+#errorMessage {
+    display: none;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    padding: 8px 8px;
+    background-color: white;
+    color: red;
+    font-family: 'Courier New', courier, monospace;
+    font-size: 24px;
+    z-index: 1000;
+}
+
+#instructions {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    font-family: 'Courier New', courier, monospace;
+    color: white;
+    row-gap: 0.2em;
+    pointer-events: none;
+}
+
+.keybind {
+    display: inline-block;
+    border: 1px solid white;
+    border-radius: 4px;
+    padding: 0em 0.2em;
+    background-color: #333;
+}
