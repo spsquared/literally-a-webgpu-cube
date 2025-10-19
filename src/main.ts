@@ -78,11 +78,13 @@ function spinnyModelMatrix(): Float32Array {
     );
     return projectionMatrix;
 }
-document.addEventListener('mousedown', () => {
+document.addEventListener('mousedown', (e) => {
+    if (e.button != 0) return;
     spinny.mouseDown = true;
     document.body.requestPointerLock();
 });
-document.addEventListener('mouseup', () => {
+document.addEventListener('mouseup', (e) => {
+    if (e.button != 0) return;
     spinny.mouseDown = false;
     document.exitPointerLock();
 });
