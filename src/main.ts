@@ -37,7 +37,7 @@ ctx.configure({
 });
 console.log('GPU limits', gpu.limits);
 
-// 4d position + 3d normal
+// 4d position
 const vertexStride = 4;
 const vertexData: [number, number, number, number][] = [
     // as triangle strip
@@ -115,7 +115,7 @@ document.addEventListener('touchmove', (e) => {
         okfineilladdathingfortouchmove.y = e.touches[0].clientY;
         e.preventDefault();
     }
-})
+});
 
 const buffers = {
     vertices: gpu.createBuffer({
