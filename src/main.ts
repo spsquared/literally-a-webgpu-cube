@@ -78,6 +78,7 @@ function spinnyModelMatrix(): Float32Array {
     );
     return projectionMatrix;
 }
+const okfineilladdathingfortouchmove = { x: 0, y: 0 }
 document.addEventListener('mousedown', (e) => {
     if (e.button != 0) return;
     spinny.mouseDown = true;
@@ -88,8 +89,14 @@ document.addEventListener('mouseup', (e) => {
     spinny.mouseDown = false;
     document.exitPointerLock();
 });
-document.addEventListener('touchstart', () => spinny.mouseDown = true);
-document.addEventListener('touchend', (e) => spinny.mouseDown = e.touches.length > 0);
+document.addEventListener('touchstart', (e) => {
+    spinny.mouseDown = true;
+    okfineilladdathingfortouchmove.x = e.touches[0].clientX;
+    okfineilladdathingfortouchmove.y = e.touches[0].clientY;
+});
+document.addEventListener('touchend', (e) => {
+    if (e.touches.length == 0) spinny.mouseDown = false;
+});
 document.addEventListener('blur', () => {
     spinny.mouseDown = false;
     document.exitPointerLock();
@@ -100,6 +107,15 @@ document.addEventListener('mousemove', (e) => {
         spinny.phi = Math.max(-Math.PI, Math.min(spinny.phi + e.movementY / 500, 0));
     }
 });
+document.addEventListener('touchmove', (e) => {
+    if (spinny.mouseDown) {
+        spinny.theta += (e.touches[0].clientX - okfineilladdathingfortouchmove.x) / 200;
+        spinny.phi = Math.max(-Math.PI, Math.min(spinny.phi + (e.touches[0].clientY - okfineilladdathingfortouchmove.y) / 200, 0));
+        okfineilladdathingfortouchmove.x = e.touches[0].clientX;
+        okfineilladdathingfortouchmove.y = e.touches[0].clientY;
+        e.preventDefault();
+    }
+})
 
 const buffers = {
     vertices: gpu.createBuffer({
