@@ -97,7 +97,7 @@ document.addEventListener('touchstart', (e) => {
 document.addEventListener('touchend', (e) => {
     if (e.touches.length == 0) spinny.mouseDown = false;
 });
-document.addEventListener('blur', () => {
+window.addEventListener('blur', () => {
     spinny.mouseDown = false;
     document.exitPointerLock();
 });
