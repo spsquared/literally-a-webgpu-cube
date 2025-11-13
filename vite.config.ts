@@ -13,7 +13,7 @@ export default defineConfig({
         target: 'es2022'
     },
     server: {
-        port: 5178
+        port: 5179
     },
     assetsInclude: [
         '*.wgsl'
